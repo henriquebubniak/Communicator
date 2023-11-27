@@ -1,0 +1,18 @@
+[package]
+name = "egui_server"
+version = "0.1.0"
+authors = ["Emil Ernerfeldt <emil.ernerfeldt@gmail.com>"]
+license = "MIT OR Apache-2.0"
+edition = "2021"
+rust-version = "1.70"
+publish = false
+
+
+[dependencies]
+eframe = "0.23"
+
+egui_extras = { version="0.23", features = ["image"] }
+
+egui_plot = "0.23"
+
+env_logger = "0.10"
