@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use eframe::egui;
-use egui_server::{decrypt_message, expect_message, plot_message, to_binary};
+use server::{decrypt_message, expect_message, plot_message, to_binary};
 use rand;
 use rsa::{RsaPrivateKey, RsaPublicKey};
 
@@ -10,7 +10,7 @@ fn main() -> Result<(), eframe::Error> {
         ..Default::default()
     };
     eframe::run_native(
-        "My egui App",
+        "Server",
         options,
         Box::new(|_| Box::<MyApp>::default()),
     )
