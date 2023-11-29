@@ -1,10 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use eframe::egui;
-use egui_plot::{Line, Plot, PlotPoints};
-use egui_server::{expect_message, to_binary};
-use rsa::{RsaPrivateKey, RsaPublicKey, Pkcs1v15Encrypt};
+use egui_server::{decrypt_message, expect_message, plot_message, to_binary};
 use rand;
+use rsa::{RsaPrivateKey, RsaPublicKey};
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -13,9 +12,7 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "My egui App",
         options,
-        Box::new(|_| {
-            Box::<MyApp>::default()
-        }),
+        Box::new(|_| Box::<MyApp>::default()),
     )
 }
 
@@ -23,7 +20,7 @@ struct MyApp {
     message: Vec<u8>,
     priv_key: RsaPrivateKey,
     pub_key: RsaPublicKey,
-    decrypted_message: String
+    decrypted_message: String,
 }
 
 impl Default for MyApp {
@@ -45,25 +42,37 @@ impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Message receiver");
-            ui.label(format!("Message: {}", String::from_utf8_lossy(&self.message)));
-            ui.label(format!("As bytes: {}", to_binary(&self.message)));
+            ui.label(format!(
+                "Message: {}",
+                String::from_utf8_lossy(&self.message)
+            ));
+            let binary_message = to_binary(&self.message);
+            let binary_message_string: Vec<u8> = binary_message.iter().map(|i| *i + 48).collect();
+            ui.label(format!(
+                "As bytes: {}",
+                String::from_utf8_lossy(&binary_message_string)
+            ));
             if ui.button("Wait for message").clicked() {
-                self.message = expect_message(&self.pub_key);
+                self.message = match expect_message(&self.pub_key) {
+                    Ok(msg) => msg,
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        vec![]
+                    }
+                };
             }
             if ui.button("Decrypt message").clicked() {
-                let m = match self.priv_key.decrypt(Pkcs1v15Encrypt, &self.message){
-                    Ok(mess) => mess,
-                    Err(_) => {println!("Failed to decrypt"); Vec::new()}
-                };
-                self.decrypted_message = String::from_utf8(m).unwrap();
+                self.decrypted_message = match decrypt_message(&self.message, &self.priv_key) {
+                    Ok(msg) => msg,
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        "".to_owned()
+                    }
+                }
             }
             ui.label(format!("Decrypted message: {}", self.decrypted_message));
-            let plot: PlotPoints = (0..self.message.len()).map(|i| {
-                let x = i as f64;
-                [x, (to_binary(&self.message).as_bytes()[i]-48).into()]
-            }).collect();
-            let line = Line::new(plot);
-            Plot::new("my_plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));
+
+            plot_message(binary_message, ui);
         });
     }
 }

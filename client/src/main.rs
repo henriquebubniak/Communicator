@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use eframe::egui;
-use egui_app::send_message;
+use egui_app::{send_message, get_rsa_pub_key};
 use rsa::RsaPublicKey;
 
 fn main() -> Result<(), eframe::Error> {
@@ -46,9 +46,19 @@ impl eframe::App for MyApp {
                     .labelled_by(ip_label.id);
             });
             if ui.button("Send").clicked() {
-                self.pub_key = send_message(&self.message, &self.ip, &self.pub_key);
+                match send_message(&self.message, &self.ip, &self.pub_key) {
+                    Ok(_) => { println!("Success"); },
+                    Err(e) => { eprintln!("{}", e); }
+                }
+            }
+            if ui.button("Get RSA public key").clicked() {
+                self.pub_key = get_rsa_pub_key(&self.ip);
             }
             ui.label(format!("Message {}, sent to {}", self.message, self.ip));
+            ui.label(format!("RSA Public key:\n {}", match &self.pub_key {
+                Some(pub_key) => serde_yaml::to_string(&pub_key).expect("failed to convert pub key to string"),
+                None => "No public key".to_owned()
+            }));
         });
     }
 }
