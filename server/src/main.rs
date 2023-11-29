@@ -20,7 +20,7 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 struct MyApp {
-    message: String,
+    message: Vec<u8>,
     priv_key: RsaPrivateKey,
     pub_key: RsaPublicKey,
     decrypted_message: String
@@ -33,7 +33,7 @@ impl Default for MyApp {
         let priv_key = RsaPrivateKey::new(&mut rng, bits).unwrap();
         let pub_key = RsaPublicKey::from(&priv_key);
         Self {
-            message: String::new(),
+            message: vec![],
             priv_key,
             pub_key,
             decrypted_message: String::new(),
@@ -45,13 +45,13 @@ impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Message receiver");
-            ui.label(format!("Message: {}", self.message));
-            ui.label(format!("As bytes: {}", to_binary(self.message.as_bytes())));
+            ui.label(format!("Message: {}", String::from_utf8_lossy(&self.message)));
+            ui.label(format!("As bytes: {}", to_binary(&self.message)));
             if ui.button("Wait for message").clicked() {
                 self.message = expect_message(&self.pub_key);
             }
             if ui.button("Decrypt message").clicked() {
-                let m = match self.priv_key.decrypt(Pkcs1v15Encrypt, self.message.as_bytes()){
+                let m = match self.priv_key.decrypt(Pkcs1v15Encrypt, &self.message){
                     Ok(mess) => mess,
                     Err(_) => {println!("Failed to decrypt"); Vec::new()}
                 };
@@ -60,7 +60,7 @@ impl eframe::App for MyApp {
             ui.label(format!("Decrypted message: {}", self.decrypted_message));
             let plot: PlotPoints = (0..self.message.len()).map(|i| {
                 let x = i as f64;
-                [x, (to_binary(self.message.as_bytes()).as_bytes()[i]-48).into()]
+                [x, (to_binary(&self.message).as_bytes()[i]-48).into()]
             }).collect();
             let line = Line::new(plot);
             Plot::new("my_plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));

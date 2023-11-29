@@ -16,6 +16,8 @@ pub fn send_message(msg: &str, ip: &str, pub_key: &Option<RsaPublicKey>) -> Opti
                         .encrypt(&mut rng, Pkcs1v15Encrypt, msg.as_bytes())
                         .unwrap();
                     let encrypted_msg_bytes: &[u8] = &encrypted_msg;
+                    let mut file = File::create("./encrypted_sent.yaml").expect("Failed to create file");
+                    file.write_all(encrypted_msg_bytes).expect("Failed to write file");
                     stream.write(encrypted_msg_bytes).unwrap();
                     println!("Sent ENCRYPTED hello, awaiting reply...");
 
