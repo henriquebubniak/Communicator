@@ -2,6 +2,7 @@
 
 use eframe::egui;
 use egui_app::send_message;
+use rsa::RsaPublicKey;
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -10,15 +11,14 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "My egui App",
         options,
-        Box::new(|_| {
-            Box::<MyApp>::default()
-        }),
+        Box::new(|_| Box::<MyApp>::default()),
     )
 }
 
 struct MyApp {
     message: String,
     ip: String,
+    pub_key: Option<RsaPublicKey>,
 }
 
 impl Default for MyApp {
@@ -26,6 +26,7 @@ impl Default for MyApp {
         Self {
             message: String::new(),
             ip: String::new(),
+            pub_key: None,
         }
     }
 }
@@ -45,9 +46,9 @@ impl eframe::App for MyApp {
                     .labelled_by(ip_label.id);
             });
             if ui.button("Send").clicked() {
-                send_message(&self.message, &self.ip);
+                self.pub_key = send_message(&self.message, &self.ip, &self.pub_key);
             }
-            ui.label(format!("Message '{}', sent to {}", self.message, self.ip));
+            ui.label(format!("Message {}, sent to {}", self.message, self.ip));
         });
     }
 }

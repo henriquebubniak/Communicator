@@ -1,13 +1,18 @@
 use std::net::{TcpListener, TcpStream, Shutdown};
 use std::io::{Read, Write};
+use serde_yaml;
 
-fn handle_client(mut stream: TcpStream)-> String {
-    let mut data = [0 as u8; 50]; // using 50 byte buffer
+use rsa::RsaPublicKey;
+
+fn handle_client(mut stream: TcpStream, pub_key: &RsaPublicKey)-> String {
+    let mut data = [0 as u8; 500]; // using 50 byte buffer
     match stream.read(&mut data) {
         Ok(_size) => {
-            // echo everything!
-            stream.write(b"Ok").unwrap();
-            let message = String::from_utf8_lossy(&data[..]);
+            let s = serde_yaml::to_string(&pub_key).expect("failed to convert to string");
+            stream.write(s.as_bytes()).unwrap();
+            let data: Vec<u8> = data.iter().map(|a| if *a == 0 { 32 } else { *a }).collect();
+            let message = String::from_utf8_lossy(&data);
+            let message = message.trim().to_owned();
             println!("Received: {}", message);
             format!("{}", message)
         },
@@ -19,7 +24,7 @@ fn handle_client(mut stream: TcpStream)-> String {
     }
 }
 
-pub fn expect_message() -> String {
+pub fn expect_message(pub_key: &RsaPublicKey) -> String {
     let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
     // accept connections and process them, spawning a new thread for each one
     println!("Server listening on port 7878");
@@ -28,7 +33,7 @@ pub fn expect_message() -> String {
             Ok(stream) => {
                 println!("New connection: {}", stream.peer_addr().unwrap());
                 drop(listener);
-                return handle_client(stream);
+                return handle_client(stream, pub_key);
             }
             Err(e) => {
                 /* connection failed */

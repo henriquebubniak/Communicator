@@ -16,3 +16,7 @@ egui_extras = { version="0.23", features = ["image"] }
 egui_plot = "0.23"
 
 env_logger = "0.10"
+rsa = { version="0.9.5", features = ["serde"]}
+rand = "0.8"
+serde = "1.0"
+serde_yaml = "0.9"
