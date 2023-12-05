@@ -7,3 +7,4 @@ This is a simple communicator application that allows users to send messages to 
 ## Next features
 
 - Line coding
+- Add tests

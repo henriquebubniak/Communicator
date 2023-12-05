@@ -1,21 +1,21 @@
+//use std::fs::File;
+//use std::io::Write;
 use eframe::egui;
-use server::{decrypt_message, expect_message, plot_message, to_binary};
 use rand;
 use rsa::{RsaPrivateKey, RsaPublicKey};
+use server::{decode_mlt3, decrypt_message, expect_message, from_binary, plot_message};
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         ..Default::default()
     };
-    eframe::run_native(
-        "Server",
-        options,
-        Box::new(|_| Box::<MyApp>::default()),
-    )
+    eframe::run_native("Server", options, Box::new(|_| Box::<MyApp>::default()))
 }
 
 struct MyApp {
-    message: Vec<u8>,
+    message: Vec<u8>,         //mlt3 encoded
+    decoded_message: Vec<u8>, //decoded, but binary
+    bytes_message: Vec<u8>,   // bytes
     priv_key: RsaPrivateKey,
     pub_key: RsaPublicKey,
     decrypted_message: String,
@@ -29,6 +29,8 @@ impl Default for MyApp {
         let pub_key = RsaPublicKey::from(&priv_key);
         Self {
             message: vec![],
+            decoded_message: vec![],
+            bytes_message: vec![],
             priv_key,
             pub_key,
             decrypted_message: String::new(),
@@ -42,14 +44,9 @@ impl eframe::App for MyApp {
             ui.heading("Message receiver");
             ui.label(format!(
                 "Message: {}",
-                String::from_utf8_lossy(&self.message)
+                String::from_utf8_lossy(&self.bytes_message)
             ));
-            let binary_message = to_binary(&self.message);
-            let binary_message_string: Vec<u8> = binary_message.iter().map(|i| *i + 48).collect();
-            ui.label(format!(
-                "As bytes: {}",
-                String::from_utf8_lossy(&binary_message_string)
-            ));
+            ui.label(format!("As bytes: {:?}", &self.decoded_message));
             if ui.button("Wait for message").clicked() {
                 self.message = match expect_message(&self.pub_key) {
                     Ok(msg) => msg,
@@ -58,19 +55,31 @@ impl eframe::App for MyApp {
                         vec![]
                     }
                 };
-            }
-            if ui.button("Decrypt message").clicked() {
-                self.decrypted_message = match decrypt_message(&self.message, &self.priv_key) {
-                    Ok(msg) => msg,
+                self.decoded_message = match decode_mlt3(&self.message) {
+                    Ok(decoded) => decoded,
                     Err(e) => {
                         eprintln!("{}", e);
-                        "".to_owned()
+                        vec![]
                     }
-                }
+                };
+                self.bytes_message = from_binary(&self.decoded_message);
+
+                //let mut file = File::create("./output").unwrap();
+                //file.write_all(&self.decoded_message).unwrap();
+            }
+            if ui.button("Decrypt message").clicked() {
+                self.decrypted_message =
+                    match decrypt_message(&self.bytes_message, &self.priv_key) {
+                        Ok(msg) => msg,
+                        Err(e) => {
+                            eprintln!("{}", e);
+                            "".to_owned()
+                        }
+                    }
             }
             ui.label(format!("Decrypted message: {}", self.decrypted_message));
 
-            plot_message(binary_message, ui);
+            plot_message(&self.message, ui);
         });
     }
 }

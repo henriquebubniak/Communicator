@@ -1,5 +1,5 @@
 use eframe::egui;
-use client::{send_message, get_rsa_pub_key};
+use client::{send_non_encrypted_message, send_encrypted_message, get_rsa_pub_key};
 use rsa::RsaPublicKey;
 
 fn main() -> Result<(), eframe::Error> {
@@ -43,8 +43,14 @@ impl eframe::App for MyApp {
                 ui.text_edit_singleline(&mut self.ip)
                     .labelled_by(ip_label.id);
             });
-            if ui.button("Send").clicked() {
-                match send_message(&self.message, &self.ip, &self.pub_key) {
+            if ui.button("Send non encrypted").clicked() {
+                match send_non_encrypted_message(&self.message, &self.ip) {
+                    Ok(_) => { println!("Success"); },
+                    Err(e) => { eprintln!("{}", e); }
+                }
+            }
+            if ui.button("Send encrypted").clicked() {
+                match send_encrypted_message(&self.message, &self.ip, &self.pub_key) {
                     Ok(_) => { println!("Success"); },
                     Err(e) => { eprintln!("{}", e); }
                 }
