@@ -1,4 +1,6 @@
 //use std::fs::File;
+use eframe::egui::Ui;
+use egui_plot::{Line, Plot, PlotPoints};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str::from_utf8;
@@ -45,7 +47,7 @@ mod tests {
     }
 }
 
-fn encode_mlt3(msg: &Vec<u8>) -> Result<Vec<u8>, &'static str> {
+pub fn encode_mlt3(msg: &Vec<u8>) -> Result<Vec<u8>, &'static str> {
     let mut last_transition: i8 = 1;
     let mut state: u8 = 1;
     let mut encoded = Vec::new();
@@ -140,6 +142,22 @@ pub fn get_rsa_pub_key(ip: &str) -> Option<RsaPublicKey> {
     }
 }
 
+pub fn send_bits(msg: &str, ip: &str) -> Result<usize, Box<dyn Error>> {
+    let vec: Vec<u8> = msg.as_bytes().iter().map(|c|*c-48).collect();
+    match TcpStream::connect(ip) {
+        Ok(mut stream) => {
+            println!("Successfully connected to server in port 7878");
+            let encoded = encode_mlt3(&vec)?;
+            let size = stream.write(&encoded)?;
+            Ok(size)
+        }
+        Err(e) => {
+            println!("Failed to connect: {}", e.to_string());
+            Err(Box::new(e))
+        }
+    }
+}
+
 pub fn to_binary(bytes: &[u8]) -> Vec<u8> {
     let mut bin_bytes = String::new();
     for &byte in bytes {
@@ -176,4 +194,17 @@ pub fn decode_mlt3(msg: &Vec<u8>) -> Result<Vec<u8>, &'static str> {
         }
     }
     Ok(decoded)
+}
+
+pub fn plot_message(msg: &Vec<u8>, ui: &mut Ui) {
+    let plot: PlotPoints = (0..msg.len())
+        .map(|i| {
+            let x = i as f64;
+            [x, msg[i].into()]
+        })
+        .collect();
+    let line = Line::new(plot);
+    Plot::new("my_plot")
+        .view_aspect(2.0)
+        .show(ui, |plot_ui| plot_ui.line(line));
 }

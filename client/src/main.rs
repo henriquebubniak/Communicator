@@ -1,5 +1,5 @@
 use eframe::egui;
-use client::{send_non_encrypted_message, send_encrypted_message, get_rsa_pub_key};
+use client::{send_non_encrypted_message, send_encrypted_message, get_rsa_pub_key, send_bits, plot_message, to_binary, encode_mlt3};
 use rsa::RsaPublicKey;
 
 fn main() -> Result<(), eframe::Error> {
@@ -55,14 +55,22 @@ impl eframe::App for MyApp {
                     Err(e) => { eprintln!("{}", e); }
                 }
             }
+            if ui.button("Send bits").clicked() {
+                match send_bits(&self.message, &self.ip) {
+                    Ok(_) => { println!("Success"); },
+                    Err(e) => { eprintln!("{}", e); }
+                }
+            }
             if ui.button("Get RSA public key").clicked() {
                 self.pub_key = get_rsa_pub_key(&self.ip);
             }
             ui.label(format!("Message {}, sent to {}", self.message, self.ip));
             ui.label(format!("RSA Public key:\n {}", match &self.pub_key {
-                Some(pub_key) => serde_yaml::to_string(&pub_key).expect("failed to convert pub key to string"),
+                Some(_) => "✅".to_owned(),
                 None => "No public key".to_owned()
             }));
+            let encoded = encode_mlt3(&to_binary(&self.message.as_bytes())).unwrap();
+            plot_message(&encoded, ui);
         });
     }
 }
