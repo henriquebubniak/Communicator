@@ -6,6 +6,8 @@ use rsa::{RsaPrivateKey, RsaPublicKey};
 use server::{decode_mlt3, decrypt_message, expect_message, from_binary, plot_message};
 
 fn main() -> Result<(), eframe::Error> {
+    println!("{}", String::from_utf16(&[255]).unwrap());
+    println!("{:?}", "ÿ".as_bytes());
     let options = eframe::NativeOptions {
         ..Default::default()
     };
@@ -46,7 +48,8 @@ impl eframe::App for MyApp {
                 "Message: {}",
                 String::from_utf8_lossy(&self.bytes_message)
             ));
-            ui.label(format!("As bytes: {:?}", &self.decoded_message));
+            ui.label(format!("Encoded bits: {:?}", &self.message));
+            ui.label(format!("Decoded bits: {:?}", &self.decoded_message));
             if ui.button("Wait for message").clicked() {
                 self.message = match expect_message(&self.pub_key) {
                     Ok(msg) => msg,
